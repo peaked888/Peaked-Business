@@ -437,6 +437,28 @@ function updateFilterBtn(){
   document.getElementById('filterbtn').textContent=has?'篩選●':'篩選';
 }
 
+// ── Build Email Section ──
+function buildEmailSection(u) {
+  const emails = (u.contacts||[]).map(c=>c.method).filter(m=>m&&m.includes('@'));
+  let inner = '';
+  if (!emails.length) {
+    inner = '<div style="font-size:14px;color:var(--hint);font-style:italic">尚未填寫 Email，請在聯絡方式欄位填入對方 Email</div>';
+  } else {
+    emails.forEach(email => {
+      inner += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'
+        + '<div style="flex:1;font-size:14px;color:var(--muted);word-break:break-all">' + email + '</div>'
+        + '<button onclick="openEmailPreview('' + u.id + '','' + email + '')" '
+        + 'style="padding:9px 16px;background:var(--accent);color:#fff;border:none;border-radius:var(--rxs);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit;flex-shrink:0">'
+        + '&#9993; 發送</button>'
+        + '</div>';
+    });
+  }
+  return '<div style="padding:14px 18px;border-top:1.5px solid var(--border);background:var(--surface)">'
+    + '<div style="font-size:12px;color:var(--hint);font-weight:500;margin-bottom:10px">&#9993; 發送課程介紹信件</div>'
+    + inner
+    + '</div>';
+}
+
 // ── Render ──
 function render(){
   updateStats();
@@ -511,22 +533,7 @@ function cardHTML(u){
         <button class="savebtn" onclick="saveNote('${u.id}')">儲存備註</button>
       </div>
 
-      <!-- Send Email Section -->
-      <div style="padding:14px 18px;border-top:1.5px solid var(--border);background:var(--surface)">
-        <div style="font-size:12px;color:var(--hint);font-weight:500;margin-bottom:10px">發送課程介紹信件</div>
-        ${(()=>{
-          const emails = (u.contacts||[]).map(c=>c.method).filter(m=>m&&m.includes('@'));
-          if(!emails.length) return '<div style="font-size:14px;color:var(--hint);font-style:italic">尚未填寫 Email，請在聯絡方式欄位填入對方 Email</div>';
-          return emails.map(email=>`
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-              <div style="flex:1;font-size:14px;color:var(--muted);word-break:break-all">${email}</div>
-              <button onclick="openEmailPreview('${u.id}','${email}')"
-                style="padding:9px 16px;background:var(--accent);color:#fff;border:none;border-radius:var(--rxs);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit;flex-shrink:0">
-                ✉️ 發送
-              </button>
-            </div>`).join('');
-        })()}
-      </div>
+      ${buildEmailSection(u)}
       ${cItems}
       <div class="acform" id="acf-${u.id}">
         <h4>新增聯絡紀錄</h4>
