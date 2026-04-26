@@ -358,6 +358,7 @@ textarea.notea:focus{outline:none;border-color:var(--accent)}
 firebase.initializeApp(FIREBASE_CONFIG);
 const db = firebase.firestore();
 const COL = 'units'; // Firestore collection name
+const MAILER_URL = 'https://script.google.com/macros/s/AKfycbz2W-aldoZ3D7EhUWK5dFJTBmjaljwkgFoOhFDbekJ6RS6y0nCeN44vHTiXnAtIE7Oc/exec';
 
 let DB = [];
 let tab = 0;
@@ -508,6 +509,23 @@ function cardHTML(u){
         <div class="ui-label">內部備註</div>
         <textarea class="notea" id="note-${u.id}" placeholder="決策者、業務心得…">${u.note||''}</textarea>
         <button class="savebtn" onclick="saveNote('${u.id}')">儲存備註</button>
+      </div>
+
+      <!-- Send Email Section -->
+      <div style="padding:14px 18px;border-top:1.5px solid var(--border);background:var(--surface)">
+        <div style="font-size:12px;color:var(--hint);font-weight:500;margin-bottom:10px">發送課程介紹信件</div>
+        ${(()=>{
+          const emails = (u.contacts||[]).map(c=>c.method).filter(m=>m&&m.includes('@'));
+          if(!emails.length) return '<div style="font-size:14px;color:var(--hint);font-style:italic">尚未填寫 Email，請在聯絡方式欄位填入對方 Email</div>';
+          return emails.map(email=>`
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+              <div style="flex:1;font-size:14px;color:var(--muted);word-break:break-all">${email}</div>
+              <button onclick="openEmailPreview('${u.id}','${email}')"
+                style="padding:9px 16px;background:var(--accent);color:#fff;border:none;border-radius:var(--rxs);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit;flex-shrink:0">
+                ✉️ 發送
+              </button>
+            </div>`).join('');
+        })()}
       </div>
       ${cItems}
       <div class="acform" id="acf-${u.id}">
@@ -674,6 +692,32 @@ function bgClose(e,id){if(e.target===document.getElementById(id))closeSheet(id);
 // ── Start ──
 startListener();
 </script>
+<!-- Email Preview Sheet -->
+<div class="overlay" id="email-overlay" onclick="bgClose(event,'email-overlay')">
+  <div class="sheet">
+    <div class="handle"></div>
+    <h2>✉️ 發送課程介紹信</h2>
+    <div style="background:var(--bg);border-radius:var(--rsm);padding:14px;margin-bottom:16px;font-size:14px;line-height:1.8;color:var(--muted)">
+      <div style="margin-bottom:6px"><span style="color:var(--hint);font-size:12px">收件人</span></div>
+      <div style="font-weight:600;color:var(--text);font-size:16px" id="preview-to"></div>
+      <div style="margin-top:10px;margin-bottom:6px"><span style="color:var(--hint);font-size:12px">單位名稱</span></div>
+      <div style="font-weight:600;color:var(--text);font-size:16px" id="preview-unit"></div>
+      <div style="margin-top:10px;margin-bottom:6px"><span style="color:var(--hint);font-size:12px">稱謂（自動帶入窗口姓名）</span></div>
+      <div style="font-weight:600;color:var(--text);font-size:16px" id="preview-contact"></div>
+      <div style="margin-top:10px;margin-bottom:6px"><span style="color:var(--hint);font-size:12px">附件</span></div>
+      <div style="color:var(--accent);font-weight:500">📎 皮克教育及程式課程介紹簡歷.pdf</div>
+    </div>
+    <div style="background:#eaf2ec;border-radius:var(--rsm);padding:12px 14px;font-size:13px;color:#2d5a3d;margin-bottom:16px;line-height:1.6">
+      ✅ 系統將以 peaked888@gmail.com 發送 HTML 格式信件，並自動夾帶課程介紹 PDF
+    </div>
+    <div class="sbtns">
+      <button class="scancel" onclick="closeSheet('email-overlay')">取消</button>
+      <button class="ssave" id="btn-send-email" onclick="sendEmail()">確認發送</button>
+    </div>
+    <div id="email-result" style="display:none;margin-top:14px;padding:14px;border-radius:var(--rsm);text-align:center;font-weight:600;font-size:15px"></div>
+  </div>
+</div>
+
 <script>
 if('serviceWorker' in navigator){
   window.addEventListener('load', () => {
@@ -681,6 +725,68 @@ if('serviceWorker' in navigator){
       .then(r => console.log('SW registered'))
       .catch(e => console.log('SW failed:', e));
   });
+}
+</script>
+
+<script>
+// ── Email Functions ──
+let emailState = {to:'', unit:'', contact:''};
+
+function openEmailPreview(unitId, email) {
+  const unit = DB.find(u=>u.id===unitId);
+  if(!unit) return;
+  emailState = { to: email, unit: unit.name, contact: unit.contactPerson||'' };
+  document.getElementById('preview-to').textContent = email;
+  document.getElementById('preview-unit').textContent = unit.name;
+  document.getElementById('preview-contact').textContent = unit.contactPerson || '（未填寫，將使用「您好」）';
+  document.getElementById('email-result').style.display = 'none';
+  document.getElementById('btn-send-email').disabled = false;
+  document.getElementById('btn-send-email').textContent = '確認發送';
+  document.getElementById('email-overlay').classList.add('on');
+}
+
+async function sendEmail() {
+  if(!MAILER_URL) {
+    alert('請先在 index.html 填入 MAILER_URL（Mailer.gs 的部署網址）');
+    return;
+  }
+  const btn = document.getElementById('btn-send-email');
+  btn.disabled = true; btn.textContent = '發送中…';
+
+  try {
+    const url = `${MAILER_URL}?action=sendEmail&to=${encodeURIComponent(emailState.to)}&unit=${encodeURIComponent(emailState.unit)}&contact=${encodeURIComponent(emailState.contact)}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    const resultEl = document.getElementById('email-result');
+    resultEl.style.display = 'block';
+    if(data.ok) {
+      resultEl.style.background = '#eaf2ec';
+      resultEl.style.color = '#2d5a3d';
+      resultEl.textContent = '✅ 信件已成功發送！';
+      btn.textContent = '已發送 ✓';
+      // Update Firebase - add email sent log
+      const unit = DB.find(u=>u.name===emailState.unit);
+      if(unit) {
+        const now = new Date().toLocaleDateString('zh-TW');
+        db.collection(COL).doc(unit.id).update({
+          lastEmailSent: now,
+          emailSentTo: emailState.to
+        });
+      }
+    } else {
+      resultEl.style.background = '#fdeaea';
+      resultEl.style.color = '#8a2020';
+      resultEl.textContent = '❌ 發送失敗：' + (data.error||'未知錯誤');
+      btn.disabled = false; btn.textContent = '重試';
+    }
+  } catch(e) {
+    const resultEl = document.getElementById('email-result');
+    resultEl.style.display = 'block';
+    resultEl.style.background = '#fdeaea';
+    resultEl.style.color = '#8a2020';
+    resultEl.textContent = '❌ 網路錯誤，請確認 MAILER_URL 是否正確';
+    btn.disabled = false; btn.textContent = '重試';
+  }
 }
 </script>
 </body>
