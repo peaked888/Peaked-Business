@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>業務開發紀錄</title>
+
+<!-- ★ 填入你的 Firebase 設定 ★ -->
+<script>
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyB26IKOezGxmepUSYk6dmULZPeR7jITioE",
+  authDomain:        "peaked-bussiness.firebaseapp.com",
+  projectId:         "peaked-bussiness",
+  storageBucket:     "peaked-bussiness.firebasestorage.app",
+  messagingSenderId: "585492601930",
+  appId:             "1:585492601930:web:df0c9db18ccb9628ce9ab3"
+};
+</script>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
+:root{
+  --bg:#f2f1ed;--surface:#fff;--border:#e4e1d8;--border-dark:#c8c5bc;
+  --text:#18170f;--muted:#6b6860;--hint:#aaa89f;
+  --accent:#2d5a3d;--accent-light:#eaf2ec;--accent-dark:#1f4029;
+  --blue:#1a3d6b;--blue-light:#e8eef7;
+  --red:#8a2020;--red-light:#fdeaea;
+  --amber:#7a4f10;--amber-light:#fdf3e3;
+  --green:#1a6b2a;--green-light:#e6f4ea;
+  --r:16px;--rsm:10px;--rxs:8px;
+  --sb:env(safe-area-inset-bottom,0px);
+  --st:env(safe-area-inset-top,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overscroll-behavior:none;background:var(--bg)}
+body{font-family:'Noto Sans TC',sans-serif;color:var(--text);font-size:17px;line-height:1.5;-webkit-text-size-adjust:100%}
+
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);
+  padding:16px 20px;padding-top:calc(16px + var(--st));
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:100}
+.logo{font-size:20px;font-weight:700}.logo em{color:var(--accent);font-style:normal}
+.sync{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--hint)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--hint);flex-shrink:0;transition:background .3s}
+.dot.ok{background:#4caf50}.dot.err{background:#e53935}
+.dot.spin{background:#ff9800;animation:blink 1s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+
+.stats{display:grid;grid-template-columns:repeat(4,1fr);
+  background:var(--surface);border-bottom:1px solid var(--border);padding:16px 12px}
+.stat{text-align:center}
+.sn{font-size:28px;font-weight:700;line-height:1}
+.sl{font-size:11px;color:var(--hint);margin-top:5px;font-weight:500}
+.sn.blue{color:var(--blue)}.sn.green{color:var(--green)}.sn.amber{color:var(--amber)}
+
+.bnav{position:fixed;bottom:0;left:0;right:0;z-index:100;
+  background:var(--surface);border-top:1px solid var(--border);
+  display:grid;grid-template-columns:repeat(3,1fr);padding-bottom:var(--sb)}
+.nb{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:12px 4px 10px;font-size:11px;color:var(--hint);background:none;border:none;
+  cursor:pointer;font-family:inherit;font-weight:500;gap:4px;position:relative}
+.nb .ic{font-size:26px;line-height:1}
+.nb.on{color:var(--accent)}
+.nb .bdg{position:absolute;top:8px;right:calc(50% - 20px);background:var(--red);
+  color:#fff;font-size:10px;min-width:18px;height:18px;border-radius:9px;
+  display:flex;align-items:center;justify-content:center;font-weight:700;padding:0 4px}
+
+.panel{display:none;padding-bottom:calc(80px + var(--sb))}
+.panel.on{display:block}
+
+.sbar{padding:12px 16px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:center}
+.swrap{flex:1;position:relative}
+.swrap input{width:100%;font-size:17px;padding:13px 16px 13px 46px;
+  border:1.5px solid var(--border-dark);border-radius:var(--rsm);
+  background:var(--bg);color:var(--text);font-family:inherit;-webkit-appearance:none}
+.swrap input:focus{outline:none;border-color:var(--accent);background:var(--surface)}
+.sico{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:18px;color:var(--hint)}
+.fbtn{padding:13px 16px;border:1.5px solid var(--border-dark);border-radius:var(--rsm);
+  background:var(--bg);color:var(--muted);font-size:15px;cursor:pointer;font-family:inherit;font-weight:500}
+.fbtn.on{background:var(--accent-light);border-color:var(--accent);color:var(--accent)}
+
+.list{padding:12px 16px}
+.card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);margin-bottom:12px;overflow:hidden}
+.card.open{border-color:var(--border-dark)}
+.ch{padding:18px 18px 16px;cursor:pointer;-webkit-user-select:none;user-select:none}
+.ch:active{background:var(--bg)}
+.ch-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}
+.cname{font-size:19px;font-weight:700;line-height:1.3;flex:1}
+.cactions{display:flex;align-items:center;gap:8px;flex-shrink:0;margin-top:2px}
+.delbtn{width:34px;height:34px;border-radius:50%;background:var(--bg);border:1.5px solid var(--border);color:var(--hint);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.delbtn:active{background:var(--red-light);border-color:var(--red);color:var(--red)}
+.chev{font-size:14px;color:var(--hint);transition:transform .2s;width:24px;text-align:center}
+.card.open .chev{transform:rotate(180deg)}
+.pills{display:flex;gap:6px;flex-wrap:wrap}
+.pill{font-size:13px;padding:5px 11px;border-radius:10px;font-weight:500;white-space:nowrap}
+.pp{background:var(--bg);color:var(--muted);border:1.5px solid var(--border)}
+.pd{background:var(--bg);color:var(--muted);border:1.5px solid var(--border)}
+.ps-開發中{background:var(--blue-light);color:var(--blue)}
+.ps-合作中{background:var(--accent-light);color:var(--accent)}
+.ps-已開課{background:var(--green-light);color:var(--green)}
+.ps-已拒絕{background:var(--red-light);color:var(--red)}
+.ps-暫停{background:var(--bg);color:var(--hint);border:1.5px solid var(--border)}
+.pi-高{background:#fce8e8;color:var(--red);font-weight:700}
+.pi-中{background:var(--amber-light);color:var(--amber)}
+.pi-低{background:var(--bg);color:var(--hint);border:1.5px solid var(--border)}
+
+.cb{display:none;border-top:1.5px solid var(--border)}
+.card.open .cb{display:block}
+
+.uinfo{padding:16px 18px;background:var(--bg);border-bottom:1.5px solid var(--border)}
+.ui-label{font-size:12px;color:var(--hint);font-weight:500;margin-bottom:8px}
+.segs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.seg{padding:9px 14px;border-radius:var(--rxs);border:1.5px solid var(--border-dark);
+  background:var(--surface);font-size:14px;color:var(--muted);cursor:pointer;font-family:inherit;font-weight:500}
+.seg:active{opacity:.7}
+.seg.on-s-開發中{background:var(--blue-light);border-color:var(--blue);color:var(--blue)}
+.seg.on-s-合作中{background:var(--accent-light);border-color:var(--accent);color:var(--accent)}
+.seg.on-s-已開課{background:var(--green-light);border-color:var(--green);color:var(--green)}
+.seg.on-s-已拒絕{background:var(--red-light);border-color:var(--red);color:var(--red)}
+.seg.on-s-暫停{background:var(--bg);border-color:var(--border-dark);color:var(--muted)}
+.seg.on-i-高{background:#fce8e8;border-color:#c62828;color:var(--red)}
+.seg.on-i-中{background:var(--amber-light);border-color:var(--amber);color:var(--amber)}
+.seg.on-i-低{background:var(--bg);border-color:var(--border-dark);color:var(--muted)}
+
+textarea.notea{width:100%;font-size:16px;padding:12px 14px;
+  border:1.5px solid var(--border-dark);border-radius:var(--rsm);
+  background:var(--surface);color:var(--text);font-family:inherit;resize:none;min-height:80px;line-height:1.5}
+textarea.notea:focus{outline:none;border-color:var(--accent)}
+.savebtn{margin-top:8px;padding:10px 20px;background:var(--accent);color:#fff;
+  border:none;border-radius:var(--rxs);font-size:15px;font-weight:500;cursor:pointer;font-family:inherit}
+.savebtn:active{background:var(--accent-dark)}
+
+.ci{padding:16px 18px;border-bottom:1.5px solid var(--border)}
+.ci:last-of-type{border-bottom:none}
+.ci-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
+.ci-left{flex:1;min-width:0}
+.ci-num{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--bg);border:1.5px solid var(--border);font-size:12px;color:var(--muted);margin-bottom:6px}
+.ci-time{font-size:16px;font-weight:600}
+.ci-method{font-size:14px;color:var(--muted);margin-top:3px;word-break:break-all}
+.ci-fu{font-size:13px;color:var(--amber);margin-top:4px;font-weight:500}
+.ci-fu.late{color:var(--red)}
+.ci-reply{font-size:16px;margin-top:8px;line-height:1.6}
+.ci-reply.empty{color:var(--hint);font-style:italic}
+.ci-mynote{font-size:14px;margin-top:8px;padding:10px 12px;background:var(--amber-light);border-radius:var(--rxs);color:var(--amber);line-height:1.5}
+
+.ntoggle{display:flex;align-items:center;gap:7px;padding:9px 14px;border-radius:var(--rxs);
+  border:1.5px solid var(--border-dark);background:var(--surface);cursor:pointer;
+  flex-shrink:0;font-size:14px;font-weight:500;color:var(--muted);transition:all .15s}
+.ntoggle.on{background:var(--accent-light);border-color:var(--accent);color:var(--accent)}
+.ntoggle.loading{opacity:.5;pointer-events:none}
+.ndot{width:9px;height:9px;border-radius:50%;background:var(--border-dark);flex-shrink:0}
+.ntoggle.on .ndot{background:var(--accent)}
+
+.acform{display:none;padding:16px 18px;background:var(--bg);border-top:1.5px solid var(--border)}
+.acform.on{display:block}
+.acform h4{font-size:15px;font-weight:600;color:var(--muted);margin-bottom:14px}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:13px;color:var(--hint);font-weight:500;margin-bottom:6px}
+.field input,.field textarea,.field select{width:100%;font-size:17px;padding:13px 14px;
+  border:1.5px solid var(--border-dark);border-radius:var(--rsm);
+  background:var(--surface);color:var(--text);font-family:inherit;-webkit-appearance:none}
+.field input:focus,.field textarea:focus{outline:none;border-color:var(--accent)}
+.field textarea{resize:none;min-height:80px;line-height:1.5}
+.field2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.ckrow{display:flex;align-items:center;gap:12px;padding:10px 0}
+.ckrow input[type=checkbox]{width:24px;height:24px;accent-color:var(--accent);flex-shrink:0}
+.ckrow label{font-size:17px}
+.fbtns{display:flex;gap:10px;margin-top:4px}
+.fsave{flex:1;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:var(--rsm);font-size:17px;font-weight:600;cursor:pointer;font-family:inherit}
+.fsave:active{background:var(--accent-dark)}.fsave:disabled{background:var(--hint)}
+.fcancel{padding:14px 18px;background:var(--surface);color:var(--muted);border:1.5px solid var(--border-dark);border-radius:var(--rsm);font-size:17px;cursor:pointer;font-family:inherit}
+.addbtn{width:100%;padding:16px;font-size:16px;color:var(--accent);background:none;border:none;border-top:1.5px dashed var(--border-dark);cursor:pointer;font-family:inherit;font-weight:600}
+.addbtn:active{background:var(--accent-light)}
+
+.fab{position:fixed;bottom:calc(80px + var(--sb));right:20px;width:64px;height:64px;
+  border-radius:50%;background:var(--accent);color:#fff;border:none;font-size:32px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 6px 24px rgba(45,90,61,.4);z-index:99}
+.fab:active{transform:scale(.9);background:var(--accent-dark)}
+
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:flex-end;justify-content:center}
+.overlay.on{display:flex}
+.sheet{background:var(--surface);border-radius:24px 24px 0 0;width:100%;max-width:600px;max-height:94vh;overflow-y:auto;padding:0 20px calc(20px + var(--sb))}
+.handle{width:40px;height:5px;border-radius:3px;background:var(--border-dark);margin:14px auto 20px}
+.sheet h2{font-size:22px;font-weight:700;margin-bottom:18px}
+.sdiv{border:none;border-top:1.5px solid var(--border);margin:14px 0}
+.stitle{font-size:13px;color:var(--muted);font-weight:600;margin-bottom:12px}
+.sbtns{display:flex;gap:10px;margin-top:18px}
+.scancel{padding:15px 20px;background:var(--bg);color:var(--muted);border:1.5px solid var(--border-dark);border-radius:var(--rsm);font-size:17px;cursor:pointer;font-family:inherit}
+.ssave{flex:1;padding:15px;background:var(--accent);color:#fff;border:none;border-radius:var(--rsm);font-size:17px;font-weight:600;cursor:pointer;font-family:inherit}
+.ssave:active{background:var(--accent-dark)}.ssave:disabled{background:var(--hint)}
+
+.foverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:180;align-items:flex-end}
+.foverlay.on{display:flex}
+.fsheet{background:var(--surface);border-radius:24px 24px 0 0;width:100%;padding:0 20px calc(20px + var(--sb));max-height:80vh;overflow-y:auto}
+.fsheet h3{font-size:18px;font-weight:700;margin-bottom:16px}
+.fgroup{margin-bottom:18px}
+.fgroup-label{font-size:13px;color:var(--hint);font-weight:600;margin-bottom:10px}
+.fopts{display:flex;gap:8px;flex-wrap:wrap}
+.fopt{padding:10px 16px;border-radius:var(--rxs);border:1.5px solid var(--border-dark);background:var(--surface);font-size:15px;color:var(--muted);cursor:pointer;font-family:inherit}
+.fopt.on{background:var(--accent-light);border-color:var(--accent);color:var(--accent);font-weight:600}
+.fapply{width:100%;padding:15px;background:var(--accent);color:#fff;border:none;border-radius:var(--rsm);font-size:17px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:8px}
+.fclear{width:100%;padding:13px;background:none;color:var(--muted);border:none;font-size:15px;cursor:pointer;font-family:inherit;margin-top:6px}
+
+.fu-section{margin:14px 16px 0}
+.fu-head{font-size:13px;font-weight:600;color:var(--hint);margin-bottom:8px}
+.fu-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);padding:18px;margin-bottom:10px}
+.fu-name{font-size:18px;font-weight:700;margin-bottom:4px}
+.fu-meta{font-size:14px;color:var(--muted);margin-bottom:8px}
+.fu-tag{display:inline-block;font-size:13px;padding:5px 12px;border-radius:8px;font-weight:600}
+.fu-late{background:var(--red-light);color:var(--red)}
+.fu-today{background:#fce8e8;color:#c62828}
+.fu-week{background:var(--blue-light);color:var(--blue)}
+.fu-reply{font-size:15px;color:var(--muted);margin-top:10px;line-height:1.5}
+.fu-note{font-size:14px;margin-top:8px;padding:10px 12px;background:var(--amber-light);border-radius:var(--rxs);color:var(--amber)}
+
+.dist-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px 16px;padding-bottom:calc(80px + var(--sb))}
+.dc{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);padding:16px}
+.dc-name{font-size:15px;font-weight:600;margin-bottom:6px}
+.dc-n{font-size:30px;font-weight:700;color:var(--accent);line-height:1}
+.dc-unit{font-size:14px;color:var(--hint);margin-bottom:10px}
+.dc-bar{background:var(--bg);border-radius:4px;height:7px;overflow:hidden;margin-bottom:8px}
+.dc-fill{height:100%;background:var(--accent);border-radius:4px;transition:width .4s}
+.dc-sub{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:3px}
+.dc-need{color:var(--blue)}.dc-open{color:var(--green)}
+
+.loading{text-align:center;padding:60px 0;color:var(--hint)}
+.spin{font-size:32px;animation:rot 1s linear infinite;display:inline-block;margin-bottom:12px}
+@keyframes rot{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:60px 0;color:var(--hint);font-size:16px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">業務<em>開發</em>紀錄</div>
+  <div class="sync"><div class="dot spin" id="sdot"></div><span id="stxt">連線中</span></div>
+</div>
+<div class="stats">
+  <div class="stat"><div class="sn" id="s0">—</div><div class="sl">總單位</div></div>
+  <div class="stat"><div class="sn blue" id="s1">—</div><div class="sl">還需聯絡</div></div>
+  <div class="stat"><div class="sn green" id="s2">—</div><div class="sl">已開課</div></div>
+  <div class="stat"><div class="sn amber" id="s3">—</div><div class="sl">高興趣</div></div>
+</div>
+
+<div class="panel on" id="p-list">
+  <div class="sbar">
+    <div class="swrap"><span class="sico">🔍</span><input type="search" id="q" placeholder="搜尋單位名稱…" oninput="render()" autocomplete="off"></div>
+    <button class="fbtn" id="filterbtn" onclick="openFilter()">篩選</button>
+  </div>
+  <div class="list" id="listEl"><div class="loading"><div class="spin">⟳</div><br>連線中…</div></div>
+</div>
+
+<div class="panel" id="p-fu">
+  <div id="fuEl" style="padding-bottom:calc(80px + var(--sb))"><div class="loading"><div class="spin">⟳</div><br>載入中…</div></div>
+</div>
+
+<div class="panel" id="p-dist">
+  <div class="dist-grid" id="distEl"><div class="loading" style="grid-column:1/-1"><div class="spin">⟳</div><br>載入中…</div></div>
+</div>
+
+<nav class="bnav">
+  <button class="nb on" id="nb0" onclick="goTab(0)"><span class="ic">📋</span>紀錄</button>
+  <button class="nb" id="nb1" onclick="goTab(1)"><span class="ic">🔔</span>跟進<span class="bdg" id="fubdg" style="display:none">0</span></button>
+  <button class="nb" id="nb2" onclick="goTab(2)"><span class="ic">🗺</span>地區</button>
+</nav>
+
+<button class="fab" onclick="openSheet()">＋</button>
+
+<!-- New Unit Sheet -->
+<div class="overlay" id="newsheet" onclick="bgClose(event,'newsheet')">
+  <div class="sheet">
+    <div class="handle"></div>
+    <h2>新增單位</h2>
+    <div class="field2">
+      <div class="field"><label>負責業務 *</label><input type="text" id="mp" placeholder="姓名"></div>
+      <div class="field"><label>單位名稱 *</label><input type="text" id="mn" placeholder="學校／機關"></div>
+    </div>
+    <div class="field2">
+      <div class="field"><label>地區</label>
+        <select id="md"><option value="">請選擇</option>
+          <option>中區</option><option>東區</option><option>西區</option><option>南區</option><option>北區</option>
+          <option>西屯區</option><option>南屯區</option><option>北屯區</option>
+          <option>豐原區</option><option>大里區</option><option>太平區</option><option>清水區</option>
+          <option>沙鹿區</option><option>大甲區</option><option>烏日區</option><option>潭子區</option>
+          <option>大雅區</option><option>神岡區</option><option>梧棲區</option><option>后里區</option>
+          <option>石岡區</option><option>東勢區</option><option>和平區</option><option>新社區</option>
+          <option>霧峰區</option><option>龍井區</option><option>大肚區</option><option>其他</option>
+        </select>
+      </div>
+      <div class="field"><label>興趣程度</label>
+        <select id="mi"><option value="">未評估</option><option value="高">🔴 高</option><option value="中">🟡 中</option><option value="低">⚪ 低</option></select>
+      </div>
+    </div>
+    <div class="field"><label>內部備註</label><textarea id="mnt" placeholder="決策者、特殊背景…"></textarea></div>
+    <hr class="sdiv">
+    <div class="stitle">第一次聯絡紀錄</div>
+    <div class="field2">
+      <div class="field"><label>聯絡時間</label><input type="text" id="mt" placeholder="2025/3"></div>
+      <div class="field"><label>聯絡方式</label><input type="text" id="mm" placeholder="email／電話"></div>
+    </div>
+    <div class="field"><label>對方回覆</label><textarea id="mr" placeholder="對方說了什麼…"></textarea></div>
+    <div class="field"><label>下次跟進日期</label><input type="date" id="mf"></div>
+    <div class="ckrow"><input type="checkbox" id="mk" checked><label for="mk">還需繼續聯絡</label></div>
+    <div class="sbtns">
+      <button class="scancel" onclick="closeSheet('newsheet')">取消</button>
+      <button class="ssave" id="msave" onclick="addUnit()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Filter Sheet -->
+<div class="foverlay" id="fsheet" onclick="bgClose(event,'fsheet')">
+  <div class="fsheet">
+    <div class="handle"></div>
+    <h3>篩選</h3>
+    <div class="fgroup"><div class="fgroup-label">狀態</div>
+      <div class="fopts" id="fopts-s">
+        <button class="fopt" data-g="s" data-v="">全部</button>
+        <button class="fopt" data-g="s" data-v="開發中">開發中</button>
+        <button class="fopt" data-g="s" data-v="合作中">合作中</button>
+        <button class="fopt" data-g="s" data-v="已開課">已開課</button>
+        <button class="fopt" data-g="s" data-v="已拒絕">已拒絕</button>
+        <button class="fopt" data-g="s" data-v="暫停">暫停</button>
+      </div>
+    </div>
+    <div class="fgroup"><div class="fgroup-label">興趣程度</div>
+      <div class="fopts" id="fopts-i">
+        <button class="fopt" data-g="i" data-v="">全部</button>
+        <button class="fopt" data-g="i" data-v="高">🔴 高</button>
+        <button class="fopt" data-g="i" data-v="中">🟡 中</button>
+        <button class="fopt" data-g="i" data-v="低">⚪ 低</button>
+      </div>
+    </div>
+    <div class="fgroup"><div class="fgroup-label">負責業務</div>
+      <div class="fopts" id="fopts-p"><button class="fopt on" data-g="p" data-v="">全部</button></div>
+    </div>
+    <button class="fapply" onclick="applyFilter()">套用篩選</button>
+    <button class="fclear" onclick="clearFilter()">清除篩選</button>
+  </div>
+</div>
+
+<script>
+// ── Firebase Init ──
+firebase.initializeApp(FIREBASE_CONFIG);
+const db = firebase.firestore();
+const COL = 'units'; // Firestore collection name
+
+let DB = [];
+let tab = 0;
+let F = {s:'',i:'',p:''};
+let tmpF = {s:'',i:'',p:''};
+let unsubscribe = null;
+
+// ── Real-time listener ──
+function startListener() {
+  setSS('spin','連線中');
+  if (unsubscribe) unsubscribe();
+  unsubscribe = db.collection(COL)
+    .orderBy('createdAt', 'desc')
+    .onSnapshot(snap => {
+      DB = snap.docs.map(d => ({id: d.id, ...d.data()}));
+      setSS('ok','即時同步');
+      render();
+      renderFu();
+      renderDist();
+      updateBadge();
+    }, err => {
+      setSS('err','連線失敗');
+      console.error(err);
+    });
+}
+
+function setSS(t,tx){document.getElementById('sdot').className='dot '+t;document.getElementById('stxt').textContent=tx;}
+
+// ── Tabs ──
+function goTab(n){
+  tab=n;
+  ['list','fu','dist'].forEach((id,i)=>document.getElementById('p-'+id).classList.toggle('on',i===n));
+  ['nb0','nb1','nb2'].forEach((id,i)=>document.getElementById(id).classList.toggle('on',i===n));
+}
+
+function updateBadge(){
+  const ct=getFuItems().filter(x=>x.diff<=0).length;
+  const b=document.getElementById('fubdg');
+  b.style.display=ct?'flex':'none';
+  b.textContent=ct;
+}
+
+function updateStats(){
+  document.getElementById('s0').textContent=DB.length;
+  document.getElementById('s1').textContent=DB.filter(u=>u.contacts&&u.contacts.length&&u.contacts[u.contacts.length-1].need).length;
+  document.getElementById('s2').textContent=DB.filter(u=>u.status==='已開課').length;
+  document.getElementById('s3').textContent=DB.filter(u=>u.interest==='高').length;
+}
+
+// ── Filter ──
+function openFilter(){
+  tmpF={...F};
+  const persons=[...new Set(DB.map(u=>u.person).filter(Boolean))].sort();
+  const pel=document.getElementById('fopts-p');
+  pel.innerHTML='<button class="fopt" data-g="p" data-v="">全部</button>'+
+    persons.map(p=>`<button class="fopt" data-g="p" data-v="${p}">${p}</button>`).join('');
+  document.querySelectorAll('.fopt').forEach(b=>{
+    b.classList.toggle('on',tmpF[b.dataset.g]===b.dataset.v);
+    b.onclick=()=>{
+      tmpF[b.dataset.g]=b.dataset.v;
+      document.querySelectorAll(`.fopt[data-g="${b.dataset.g}"]`).forEach(x=>x.classList.remove('on'));
+      b.classList.add('on');
+    };
+  });
+  document.getElementById('fsheet').classList.add('on');
+}
+function applyFilter(){F={...tmpF};document.getElementById('fsheet').classList.remove('on');render();updateFilterBtn();}
+function clearFilter(){F={s:'',i:'',p:''};tmpF={...F};document.getElementById('fsheet').classList.remove('on');render();updateFilterBtn();}
+function updateFilterBtn(){
+  const has=F.s||F.i||F.p;
+  document.getElementById('filterbtn').classList.toggle('on',!!has);
+  document.getElementById('filterbtn').textContent=has?'篩選●':'篩選';
+}
+
+// ── Render ──
+function render(){
+  updateStats();
+  const q=document.getElementById('q').value.toLowerCase();
+  const filtered=DB.filter(u=>{
+    if(q&&!u.name.toLowerCase().includes(q)&&!(u.person||'').includes(q)&&!(u.district||'').includes(q))return false;
+    if(F.s&&u.status!==F.s)return false;
+    if(F.i&&u.interest!==F.i)return false;
+    if(F.p&&u.person!==F.p)return false;
+    return true;
+  });
+  const el=document.getElementById('listEl');
+  if(!filtered.length){el.innerHTML='<div class="empty">沒有符合的紀錄</div>';return;}
+  el.innerHTML=filtered.map(u=>cardHTML(u)).join('');
+}
+
+function cardHTML(u){
+  const contacts=u.contacts||[];
+  const ln=contacts.length?contacts[contacts.length-1].need:false;
+  const st=u.status||'開發中', it=u.interest||'';
+  const fu=getFuCount(u);
+  const fuBadge=fu?`<span style="font-size:12px;color:var(--amber);font-weight:600">🔔${fu}</span>`:'';
+  const pills=[
+    `<span class="pill pp">${u.person||'—'}</span>`,
+    u.district?`<span class="pill pd">📍${u.district}</span>`:'',
+    `<span class="pill ps-${st}">${st}</span>`,
+    it?`<span class="pill pi-${it}">${it==='高'?'🔴高':it==='中'?'🟡中':'⚪低'}</span>`:'',
+    fuBadge
+  ].filter(Boolean).join('');
+  const stSegs=['開發中','合作中','已開課','已拒絕','暫停'].map(s=>
+    `<button class="seg ${st===s?'on-s-'+s:''}" onclick="setField('${u.id}','status','${s}')">${s}</button>`).join('');
+  const itSegs=['高','中','低'].map(v=>
+    `<button class="seg ${it===v?'on-i-'+v:''}" onclick="setField('${u.id}','interest','${v}')">${v==='高'?'🔴高':v==='中'?'🟡中':'⚪低'}</button>`).join('');
+  const cItems=contacts.map((c,i)=>{
+    const diff=c.followup?daysDiff(c.followup):null;
+    const od=diff!==null&&diff<0;
+    const fuLabel=diff===null?'':od?`⚠️ 逾期${Math.abs(diff)}天（${c.followup}）`:diff===0?'🔔 今天需跟進':`🔔 ${diff}天後跟進（${c.followup}）`;
+    return `<div class="ci">
+      <div class="ci-top">
+        <div class="ci-left">
+          <div class="ci-num">${i+1}</div>
+          <div class="ci-time">${c.time||'未記錄時間'}</div>
+          ${c.method?`<div class="ci-method">${c.method}</div>`:''}
+          ${fuLabel?`<div class="ci-fu ${od?'late':''}">${fuLabel}</div>`:''}
+        </div>
+        <div class="ntoggle ${c.need?'on':''}" id="nt-${u.id}-${i}" onclick="toggleNeed('${u.id}',${i})">
+          <div class="ndot"></div>${c.need?'追蹤中':'已完成'}
+        </div>
+      </div>
+      ${c.reply?`<div class="ci-reply">${c.reply}</div>`:`<div class="ci-reply empty">無回覆紀錄</div>`}
+      ${c.myNote?`<div class="ci-mynote">💬 ${c.myNote}</div>`:''}
+    </div>`;
+  }).join('');
+  return `<div class="card" id="card-${u.id}">
+    <div class="ch" onclick="toggleCard('${u.id}')">
+      <div class="ch-top">
+        <div class="cname">${u.name}</div>
+        <div class="cactions">
+          <button class="delbtn" onclick="event.stopPropagation();delUnit('${u.id}')">✕</button>
+          <span class="chev">▼</span>
+        </div>
+      </div>
+      <div class="pills">${pills}</div>
+    </div>
+    <div class="cb">
+      <div class="uinfo">
+        <div class="ui-label">狀態</div><div class="segs">${stSegs}</div>
+        <div class="ui-label">興趣程度</div><div class="segs">${itSegs}</div>
+        <div class="ui-label">內部備註</div>
+        <textarea class="notea" id="note-${u.id}" placeholder="決策者、業務心得…">${u.note||''}</textarea>
+        <button class="savebtn" onclick="saveNote('${u.id}')">儲存備註</button>
+      </div>
+      ${cItems}
+      <div class="acform" id="acf-${u.id}">
+        <h4>新增聯絡紀錄</h4>
+        <div class="field2">
+          <div class="field"><label>聯絡時間</label><input type="text" id="act-${u.id}" placeholder="2025/5"></div>
+          <div class="field"><label>聯絡方式</label><input type="text" id="acm-${u.id}" placeholder="email／電話"></div>
+        </div>
+        <div class="field"><label>對方回覆</label><textarea id="acr-${u.id}" placeholder="對方說了什麼…"></textarea></div>
+        <div class="field"><label>我的觀察（內部）</label><textarea id="acn-${u.id}" placeholder="業務心得、下次策略…"></textarea></div>
+        <div class="field"><label>下次跟進日期</label><input type="date" id="acf2-${u.id}"></div>
+        <div class="ckrow"><input type="checkbox" id="ack-${u.id}" checked><label for="ack-${u.id}">還需繼續聯絡</label></div>
+        <div class="fbtns">
+          <button class="fcancel" onclick="toggleAcf('${u.id}')">取消</button>
+          <button class="fsave" id="acsv-${u.id}" onclick="saveContact('${u.id}')">儲存</button>
+        </div>
+      </div>
+      <button class="addbtn" onclick="toggleAcf('${u.id}')">＋ 新增聯絡紀錄</button>
+    </div>
+  </div>`;
+}
+
+// ── Followup ──
+function daysDiff(s){if(!s)return null;const d=new Date(s);d.setHours(0,0,0,0);const t=new Date();t.setHours(0,0,0,0);return Math.round((d-t)/86400000);}
+function getFuCount(u){return(u.contacts||[]).filter(c=>c.followup&&daysDiff(c.followup)!==null&&daysDiff(c.followup)<=7).length;}
+function getFuItems(){
+  const items=[];
+  DB.forEach(u=>(u.contacts||[]).forEach((c,i)=>{
+    if(!c.followup)return;
+    const diff=daysDiff(c.followup);
+    if(diff!==null&&diff<=7)items.push({u,c,i,diff});
+  }));
+  return items.sort((a,b)=>a.diff-b.diff);
+}
+function renderFu(){
+  const el=document.getElementById('fuEl');
+  const items=getFuItems();
+  const late=items.filter(x=>x.diff<0);
+  const today=items.filter(x=>x.diff===0);
+  const week=items.filter(x=>x.diff>0);
+  if(!items.length){el.innerHTML='<div class="empty" style="padding-top:60px">🎉<br>本週沒有待跟進</div>';return;}
+  const g=(title,list,cls)=>{
+    if(!list.length)return'';
+    return`<div class="fu-section"><div class="fu-head">${title}（${list.length}）</div>`+
+      list.map(x=>`<div class="fu-card">
+        <div class="fu-name">${x.u.name}</div>
+        <div class="fu-meta">${x.u.person||''}${x.u.district?' ・ '+x.u.district:''}</div>
+        <span class="fu-tag ${cls}">${x.diff<0?`逾期${Math.abs(x.diff)}天`:x.diff===0?'今天':''+x.diff+'天後'}</span>
+        ${x.c.reply?`<div class="fu-reply">${x.c.reply}</div>`:''}
+        ${x.c.myNote?`<div class="fu-note">💬 ${x.c.myNote}</div>`:''}
+      </div>`).join('')+'</div>';
+  };
+  el.innerHTML=g('⚠️ 已逾期',late,'fu-late')+g('🔴 今天',today,'fu-today')+g('📅 本週',week,'fu-week');
+}
+function renderDist(){
+  const el=document.getElementById('distEl');
+  const map={};
+  DB.forEach(u=>{
+    const d=u.district||'未填寫';
+    if(!map[d])map[d]={total:0,need:0,open:0};
+    map[d].total++;
+    const c=u.contacts||[];
+    if(c.length&&c[c.length-1].need)map[d].need++;
+    if(u.status==='已開課')map[d].open++;
+  });
+  const sorted=Object.entries(map).sort((a,b)=>b[1].total-a[1].total);
+  const mx=Math.max(...sorted.map(([,v])=>v.total),1);
+  if(!sorted.length){el.innerHTML='<div class="empty" style="grid-column:1/-1">尚無資料</div>';return;}
+  el.innerHTML=sorted.map(([d,v])=>`
+    <div class="dc">
+      <div class="dc-name">📍 ${d}</div>
+      <div class="dc-n">${v.total}</div><div class="dc-unit">家單位</div>
+      <div class="dc-bar"><div class="dc-fill" style="width:${Math.round(v.total/mx*100)}%"></div></div>
+      <div class="dc-sub"><span class="dc-need">還需聯絡 ${v.need} 家</span><span class="dc-open">已開課 ${v.open} 家</span></div>
+    </div>`).join('');
+}
+
+// ── Firestore CRUD ──
+async function addUnit(){
+  const p=document.getElementById('mp').value.trim();
+  const n=document.getElementById('mn').value.trim();
+  if(!p||!n){alert('請填寫負責業務與單位名稱');return;}
+  const btn=document.getElementById('msave');
+  btn.disabled=true;btn.textContent='儲存中…';
+  const contact={method:document.getElementById('mm').value.trim(),time:document.getElementById('mt').value.trim(),
+    reply:document.getElementById('mr').value.trim(),followup:document.getElementById('mf').value,need:document.getElementById('mk').checked};
+  try{
+    await db.collection(COL).add({
+      person:p,name:n,district:document.getElementById('md').value,
+      interest:document.getElementById('mi').value,note:document.getElementById('mnt').value.trim(),
+      status:'開發中',contacts:[contact],createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    closeSheet('newsheet');
+  }catch(e){alert('儲存失敗：'+e.message);}
+  btn.disabled=false;btn.textContent='儲存';
+}
+
+async function saveContact(id){
+  const btn=document.getElementById('acsv-'+id);
+  btn.disabled=true;btn.textContent='儲存中…';
+  const unit=DB.find(u=>u.id===id);
+  if(!unit){btn.disabled=false;btn.textContent='儲存';return;}
+  const contacts=[...(unit.contacts||[]),{
+    method:document.getElementById('acm-'+id).value.trim(),
+    time:document.getElementById('act-'+id).value.trim(),
+    reply:document.getElementById('acr-'+id).value.trim(),
+    myNote:document.getElementById('acn-'+id).value.trim(),
+    followup:document.getElementById('acf2-'+id).value,
+    need:document.getElementById('ack-'+id).checked
+  }];
+  try{
+    await db.collection(COL).doc(id).update({contacts});
+    toggleAcf(id);
+    ['acm-','act-','acr-','acn-','acf2-'].forEach(p=>{const el=document.getElementById(p+id);if(el)el.value='';});
+    document.getElementById('ack-'+id).checked=true;
+  }catch(e){alert('儲存失敗：'+e.message);}
+  btn.disabled=false;btn.textContent='儲存';
+}
+
+async function setField(id,field,val){
+  try{await db.collection(COL).doc(id).update({[field]:val});}
+  catch(e){alert('更新失敗');}
+}
+
+async function saveNote(id){
+  const v=document.getElementById('note-'+id).value.trim();
+  try{await db.collection(COL).doc(id).update({note:v});}
+  catch(e){alert('儲存失敗');}
+}
+
+async function toggleNeed(id,idx){
+  const el=document.getElementById('nt-'+id+'-'+idx);
+  if(el)el.classList.add('loading');
+  const unit=DB.find(u=>u.id===id);
+  if(!unit){if(el)el.classList.remove('loading');return;}
+  const contacts=[...(unit.contacts||[])];
+  if(contacts[idx])contacts[idx]={...contacts[idx],need:!contacts[idx].need};
+  try{await db.collection(COL).doc(id).update({contacts});}
+  catch(e){if(el)el.classList.remove('loading');alert('更新失敗');}
+}
+
+async function delUnit(id){
+  if(!confirm('確定刪除此單位？'))return;
+  try{await db.collection(COL).doc(id).delete();}
+  catch(e){alert('刪除失敗');}
+}
+
+// ── UI helpers ──
+function toggleCard(id){document.getElementById('card-'+id).classList.toggle('open');}
+function toggleAcf(id){document.getElementById('acf-'+id).classList.toggle('on');}
+function openSheet(){document.getElementById('newsheet').classList.add('on');}
+function closeSheet(id){
+  document.getElementById(id).classList.remove('on');
+  if(id==='newsheet'){
+    ['mp','mn','mt','mm','mr','mnt','mf'].forEach(i=>{const el=document.getElementById(i);if(el)el.value='';});
+    document.getElementById('md').value='';document.getElementById('mi').value='';
+    document.getElementById('mk').checked=true;
+  }
+}
+function bgClose(e,id){if(e.target===document.getElementById(id))closeSheet(id);}
+
+// ── Start ──
+startListener();
+</script>
+</body>
+</html>
