@@ -361,9 +361,13 @@ function startListener() {
   setSS('spin','連線中');
   if (unsubscribe) unsubscribe();
   unsubscribe = db.collection(COL)
-    .orderBy('createdAt', 'desc')
     .onSnapshot(snap => {
-      DB = snap.docs.map(d => ({id: d.id, ...d.data()}));
+      DB = snap.docs.map(d => ({id: d.id, ...d.data()}))
+        .sort((a,b) => {
+          const ta = a.createdAt ? a.createdAt.seconds : 0;
+          const tb = b.createdAt ? b.createdAt.seconds : 0;
+          return tb - ta;
+        });
       setSS('ok','即時同步');
       render();
       renderFu();
