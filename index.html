@@ -3,7 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>業務開發紀錄</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2d5a3d">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="皮克業務">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="apple-touch-icon" sizes="512x512" href="icon-512.png">
+<title>皮克教育業務開發系統</title>
 
 <!-- ★ 填入你的 Firebase 設定 ★ -->
 <script>
@@ -237,7 +245,7 @@ textarea.notea:focus{outline:none;border-color:var(--accent)}
 <body>
 
 <div class="topbar">
-  <div class="logo">業務<em>開發</em>紀錄</div>
+  <div class="logo">皮克教育<em>業務開發</em>系統</div>
   <div class="sync"><div class="dot spin" id="sdot"></div><span id="stxt">連線中</span></div>
 </div>
 <div class="stats">
@@ -296,6 +304,7 @@ textarea.notea:focus{outline:none;border-color:var(--accent)}
         <select id="mi"><option value="">未評估</option><option value="高">🔴 高</option><option value="中">🟡 中</option><option value="低">⚪ 低</option></select>
       </div>
     </div>
+    <div class="field"><label>窗口姓名職位</label><input type="text" id="mcp" placeholder="例：學務處陳主任"></div>
     <div class="field"><label>內部備註</label><textarea id="mnt" placeholder="決策者、特殊背景…"></textarea></div>
     <hr class="sdiv">
     <div class="stitle">第一次聯絡紀錄</div>
@@ -451,6 +460,7 @@ function cardHTML(u){
   const fuBadge=fu?`<span style="font-size:12px;color:var(--amber);font-weight:600">🔔${fu}</span>`:'';
   const pills=[
     `<span class="pill pp">${u.person||'—'}</span>`,
+    u.contactPerson?`<span class="pill pd">👤${u.contactPerson}</span>`:'',
     u.district?`<span class="pill pd">📍${u.district}</span>`:'',
     `<span class="pill ps-${st}">${st}</span>`,
     it?`<span class="pill pi-${it}">${it==='高'?'🔴高':it==='中'?'🟡中':'⚪低'}</span>`:'',
@@ -587,7 +597,9 @@ async function addUnit(){
   try{
     await db.collection(COL).add({
       person:p,name:n,district:document.getElementById('md').value,
-      interest:document.getElementById('mi').value,note:document.getElementById('mnt').value.trim(),
+      interest:document.getElementById('mi').value,
+      contactPerson:document.getElementById('mcp').value.trim(),
+      note:document.getElementById('mnt').value.trim(),
       status:'開發中',contacts:[contact],createdAt:firebase.firestore.FieldValue.serverTimestamp()
     });
     closeSheet('newsheet');
@@ -652,7 +664,7 @@ function openSheet(){document.getElementById('newsheet').classList.add('on');}
 function closeSheet(id){
   document.getElementById(id).classList.remove('on');
   if(id==='newsheet'){
-    ['mp','mn','mt','mm','mr','mnt','mf'].forEach(i=>{const el=document.getElementById(i);if(el)el.value='';});
+    ['mp','mn','mt','mm','mr','mnt','mf','mcp'].forEach(i=>{const el=document.getElementById(i);if(el)el.value='';});
     document.getElementById('md').value='';document.getElementById('mi').value='';
     document.getElementById('mk').checked=true;
   }
@@ -661,6 +673,15 @@ function bgClose(e,id){if(e.target===document.getElementById(id))closeSheet(id);
 
 // ── Start ──
 startListener();
+</script>
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(r => console.log('SW registered'))
+      .catch(e => console.log('SW failed:', e));
+  });
+}
 </script>
 </body>
 </html>
