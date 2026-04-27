@@ -439,37 +439,24 @@ function updateFilterBtn(){
 
 // ── Build Email Section ──
 function buildEmailSection(u) {
-  var emails = (u.contacts||[]).map(function(c){return c.method||'';}).filter(function(m){return m.indexOf('@')>-1;});
-  var wrap = document.createElement('div');
-  wrap.style.cssText = 'padding:14px 18px;border-top:1.5px solid var(--border);background:var(--surface)';
-  var label = document.createElement('div');
-  label.style.cssText = 'font-size:12px;color:var(--hint);font-weight:500;margin-bottom:10px';
-  label.textContent = '✉ 發送課程介紹信件';
-  wrap.appendChild(label);
+  const emails = (u.contacts||[]).map(c=>c.method).filter(m=>m&&m.includes('@'));
+  let inner = '';
   if (!emails.length) {
-    var msg = document.createElement('div');
-    msg.style.cssText = 'font-size:14px;color:var(--hint);font-style:italic';
-    msg.textContent = '尚未填寫 Email，請在聯絡方式欄位填入對方 Email';
-    wrap.appendChild(msg);
+    inner = '<div style="font-size:14px;color:var(--hint);font-style:italic">尚未填寫 Email，請在聯絡方式欄位填入對方 Email</div>';
   } else {
-    emails.forEach(function(email) {
-      var row = document.createElement('div');
-      row.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:8px';
-      var emailDiv = document.createElement('div');
-      emailDiv.style.cssText = 'flex:1;font-size:14px;color:var(--muted);word-break:break-all';
-      emailDiv.textContent = email;
-      var btn = document.createElement('button');
-      btn.style.cssText = 'padding:9px 16px;background:var(--accent);color:#fff;border:none;border-radius:var(--rxs);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit;flex-shrink:0';
-      btn.textContent = '✉ 發送';
-      btn.addEventListener('click', (function(id, em) {
-        return function() { openEmailPreview(id, em); };
-      })(u.id, email));
-      row.appendChild(emailDiv);
-      row.appendChild(btn);
-      wrap.appendChild(row);
+    emails.forEach(email => {
+      inner += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'
+        + '<div style="flex:1;font-size:14px;color:var(--muted);word-break:break-all">' + email + '</div>'
+        + '<button onclick="openEmailPreview('' + u.id + '','' + email + '')" '
+        + 'style="padding:9px 16px;background:var(--accent);color:#fff;border:none;border-radius:var(--rxs);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit;flex-shrink:0">'
+        + '&#9993; 發送</button>'
+        + '</div>';
     });
   }
-  return wrap.outerHTML;
+  return '<div style="padding:14px 18px;border-top:1.5px solid var(--border);background:var(--surface)">'
+    + '<div style="font-size:12px;color:var(--hint);font-weight:500;margin-bottom:10px">&#9993; 發送課程介紹信件</div>'
+    + inner
+    + '</div>';
 }
 
 // ── Render ──
