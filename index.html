@@ -444,10 +444,12 @@ function buildEmailSection(u) {
   if (!emails.length) {
     inner = '<div style="font-size:14px;color:var(--hint);font-style:italic">尚未填寫 Email，請在聯絡方式欄位填入對方 Email</div>';
   } else {
-    emails.forEach(email => {
+    emails.forEach(function(email) {
+      const safeId = u.id.replace(/'/g, "");
+      const safeEmail = email.replace(/'/g, "");
       inner += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'
         + '<div style="flex:1;font-size:14px;color:var(--muted);word-break:break-all">' + email + '</div>'
-        + '<button onclick="openEmailPreview('' + u.id + '','' + email + '')" '
+        + '<button onclick="openEmailPreview('' + safeId + '','' + safeEmail + '')" '
         + 'style="padding:9px 16px;background:var(--accent);color:#fff;border:none;border-radius:var(--rxs);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit;flex-shrink:0">'
         + '&#9993; 發送</button>'
         + '</div>';
